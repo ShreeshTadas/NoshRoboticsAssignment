@@ -26,6 +26,7 @@ This repository contains comprehensive solutions for the embedded systems engine
   - [System Architecture](#system-architecture)
   - [Design Assumptions](#design-assumptions)
   - [Expected Behavior](#q2-expected-behavior)
+  - [Sample Output](#sample-output)
 - [Requirements](#requirements)
 - [Project Structure](#project-structure)
 
@@ -44,7 +45,7 @@ This assignment demonstrates proficiency in two critical domains of embedded sys
 
 ### Q1 Overview
 
-This project implements a low-power, interrupt-driven state machine on the NUCLEO-G070RB board. A single tactile switch cycles through four distinct LED blinking frequencies: **0.5 Hz, 1.0 Hz, 2.0 Hz, and 4.0 Hz**, creating an elegant demonstration of real-time embedded systems design principles.
+This project implements a low-power, interrupt-driven state machine on the NUCLEO-G070RB board. A single tactile switch cycles through four distinct LED blinking frequencies: **0.5 Hz, 1.0 Hz, 2.0 Hz, and 4.0 Hz**. The firmware prioritizes power efficiency and real-time responsiveness using interrupt-driven architecture.
 
 **Key Design Goals:**
 - Zero busy-waiting (no polling loops)
@@ -54,7 +55,7 @@ This project implements a low-power, interrupt-driven state machine on the NUCLE
 
 ### Hardware Mapping
 
-> **Note:** This firmware is designed to utilize the existing on-board peripherals of the NUCLEO-G070RB, requiring no external breadboard circuitry.
+> **Note:** This firmware is designed to utilize the existing on-board peripherals of the NUCLEO-G070RB, requiring no external breadboard circuitry. Refer to the [STM32G070RB Pinout Diagram](./STM32G070RB_Pinout.pdf) for detailed pin configuration.
 
 | Component | Pin | Configuration |
 |-----------|-----|----------------|
@@ -74,13 +75,13 @@ HAL_PWR_EnterSLEEPMode(PWR_MAINREGULATOR_ON, PWR_SLEEPENTRY_WFI);
 This halts the ARM Cortex core clock while keeping peripherals operational, dramatically reducing power consumption during idle periods.
 
 #### SysTick Management
-Before entering Sleep Mode, `HAL_SuspendTick()` is called so the 1ms SysTick interrupt doesn't unnecessarily wake the core. `HAL_ResumeTick()` is immediately called upon waking (inside the button interrupt handler), ensuring accurate timing only when needed.
+Before entering Sleep Mode, `HAL_SuspendTick()` is called so the 1ms SysTick interrupt doesn't unnecessarily wake the core. `HAL_ResumeTick()` is immediately called upon waking (inside the button interrupt handler).
 
 #### Non-Blocking Debounce
 Inside the EXTI callback, a 50ms software debounce is implemented using `HAL_GetTick()`. Unlike `HAL_Delay()`, this is entirely non-blocking and prevents ISR deadlocks if interrupt priorities are misconfigured.
 
 #### Dynamic Timer Reconfiguration
-Rather than running multiple timers, the Auto-Reload Register (ARR) of TIM6 is dynamically updated on each button press. The timer counter is explicitly reset using `__HAL_TIM_SET_COUNTER()`, ensuring immediate frequency transitions without phase discontinuities.
+Rather than running multiple timers, the Auto-Reload Register (ARR) of TIM6 is dynamically updated on each button press. The timer counter is explicitly reset using `__HAL_TIM_SET_COUNTER()`, ensuring deterministic frequency transitions.
 
 **Reconfiguration Table:**
 | Target Frequency | ARR Value |
@@ -113,13 +114,14 @@ This project was generated using **STM32CubeIDE**. To view or flash the code:
 
 ### Q2 Overview
 
-This C program simulates an asynchronous producer-consumer embedded system using POSIX threads. It generates simulated sensor bytes at regular intervals and periodically processes them if the buffer meets a specific threshold, demonstrating real-world embedded systems concurrency challenges.
+This C program simulates an asynchronous producer-consumer embedded system using POSIX threads. It generates simulated sensor bytes at regular intervals and periodically processes them if the buffer accumulates ≥ 50 bytes. The design emphasizes thread-safe concurrent programming with explicit mutex synchronization.
 
 **Key Features:**
 - Thread-safe producer-consumer pattern
 - Mutex-protected shared buffer
 - Memory-dump hex output format
 - Designed for online compiler evaluation
+- Sample output demonstrating expected behavior included
 
 ### How to Run (Q2)
 
@@ -145,7 +147,7 @@ The application utilizes `<pthread.h>` to run two concurrent threads with synchr
 - **Thread Safety**: Acquires mutex lock before buffer read/modification
 
 #### Thread Safety Mechanism
-A `pthread_mutex_t` lock completely guards the global buffer structure, preventing race conditions where the producer might write while the consumer is calculating indexes or resetting the byte counter.
+A `pthread_mutex_t` lock completely guards the global buffer structure, preventing race conditions where the producer might write while the consumer is calculating indexes or resetting the byte count.
 
 **Critical Section Protection:**
 ```
@@ -161,7 +163,7 @@ Mutex Unlock
 To map the assignment requirements into a functional, verifiable online simulation, the following assumptions were made:
 
 #### Time Scaling for Online Compilers
-Online IDEs often have strict execution time limits (killing processes after ~10–15 seconds). To ensure the reviewer can see multiple 10-second and 20-second processing cycles within a reasonable runtime, time is scaled:
+Online IDEs often have strict execution time limits (killing processes after ~10–15 seconds). To ensure the reviewer can see multiple 10-second and 20-second processing cycles within a reasonable timeframe:
 - 1 real second = 1 simulated second (using `usleep()` for sub-second precision)
 - This allows the full producer-consumer cycle to execute and demonstrate correctness in ~15–20 seconds
 
@@ -175,6 +177,15 @@ If the buffer has 54 bytes at a 20-second processing mark:
 - The **newest/latest 50 bytes** are printed (bytes 5–54)
 - The printed bytes are then removed, leaving the oldest 4 bytes (0–4) in the buffer
 - This follows a tail-deletion (FIFO-friendly) approach rather than head-deletion
+
+### Sample Output
+
+A sample output demonstrating the expected behavior of the Q2 program has been recorded and is available in the repository. This output shows:
+- Producer messages at regular intervals indicating bytes added to the buffer
+- Consumer processing events at 10-second intervals with hex-formatted output
+- Proper thread synchronization and buffer management
+
+To view the sample output, see [`Q2_Sensor_Simulation/sample_output.txt`](./Q2_Sensor_Simulation/sample_output.txt)
 
 ### Q2 Expected Behavior
 
@@ -213,6 +224,7 @@ If the buffer has 54 bytes at a 20-second processing mark:
 ```
 NoshRoboticsAssignment/
 ├── README.md                          # This file
+├── STM32G070RB_Pinout.pdf             # Pinout diagram for STM32G070RB microcontroller
 ├── Q1_STM32_Firmware/                 # STM32CubeIDE project
 │   ├── Core/
 │   │   ├── Src/
@@ -225,6 +237,7 @@ NoshRoboticsAssignment/
 │   └── ...
 └── Q2_Sensor_Simulation/              # Online compiler project
     ├── q2_sensor_sim.c               # Single-file producer-consumer
+    ├── sample_output.txt              # Sample program output demonstrating expected behavior
     └── README.md                       # Q2-specific documentation
 ```
 
